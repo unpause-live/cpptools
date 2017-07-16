@@ -28,11 +28,6 @@ namespace unpause { namespace async {
     }
     
     // run(thread_pool...)
-    void run(thread_pool& pool, std::unique_ptr<detail::task_container>& task) {
-        pool.tasks.add(std::move(task));
-        pool.task_waiter.notify_one();
-    }
-    
     template<class R, class... Args>
     void run(thread_pool& pool, task<R, Args...>& t) {
         pool.tasks.add(t);
@@ -105,7 +100,7 @@ namespace unpause { namespace async {
         auto t = make_task(r, a...);
         run_sync(pool, t);
     }
-
+    
     template<class R, class... Args>
     void run_sync(thread_pool& pool, task_queue& queue, task<R, Args...>& t)
     {
