@@ -28,6 +28,13 @@ namespace unpause { namespace async {
     }
     
     // run(thread_pool...)
+    namespace detail {
+        void run(thread_pool& pool, std::unique_ptr<detail::task_container>& task) {
+            pool.tasks.add(std::move(task));
+            pool.task_waiter.notify_one();
+        }
+    }
+    
     template<class R, class... Args>
     void run(thread_pool& pool, task<R, Args...>& t) {
         pool.tasks.add(t);
@@ -53,7 +60,7 @@ namespace unpause { namespace async {
                 if(!queue.complete.load() && queue.has_next()) {
                     auto next = std::move(queue.tasks.front());
                     queue.tasks.pop();
-                    run(pool, next);
+                    detail::run(pool, next);
                 } else {
                     queue.task_mutex.unlock();
                 }
@@ -62,7 +69,7 @@ namespace unpause { namespace async {
             if(queue.task_mutex.try_lock()) {
                 auto next = std::move(queue.tasks.front());
                 queue.tasks.pop();
-                run(pool, next);
+                detail::run(pool, next);
             }
         }
     }
