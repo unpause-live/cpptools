@@ -1,11 +1,11 @@
 BASE=.
 BUILD_DIR=$(BASE)/build
 
-SRC=$(BASE)/src/async/AsyncQueue.cpp
+SRC=""
 OBJS=$(SRC:.cpp=.o)
 
 CFLAGS=-std=c++14 -pthread -c -fPIC -O2 -I$(BASE)/include
-LDFLAGS=-lpthread
+LDFLAGS=-lpthread -Wl,-z,defs
 CC=g++
 
 all: libcpptools.so libcpptools.a headers

@@ -7,12 +7,13 @@
  *  See the file LICENSE included with this distribution for more
  *  information.
  */
+ 
+#ifndef __unpause_tools_async
+#define __unpause_tools_async
 
-#include <unpause/tools/async/AsyncQueue.h>
+#include <unpause/__unpause/async/task.hpp>
+#include <unpause/__unpause/async/task_queue.hpp>
+#include <unpause/__unpause/async/thread_pool.hpp>
+#include <unpause/__unpause/async/run.hpp>
 
-namespace unpause { namespace async {
-    
-    std::unique_ptr<SharedAsyncQueue> SharedAsyncQueue::s_saq;
-    int AsyncQueue::s_threadCount = 8;
-}
-}
+#endif
