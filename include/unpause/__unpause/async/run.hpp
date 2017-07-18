@@ -11,6 +11,8 @@
 #ifndef UNPAUSE_ASYNC_RUN_HPP
 #define UNPAUSE_ASYNC_RUN_HPP
 
+#include <unpause/__unpause/async/thread_pool.hpp>
+
 namespace unpause { namespace async {
     
     // run(task_queue...)

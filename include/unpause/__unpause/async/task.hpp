@@ -11,8 +11,9 @@
 #ifndef UNPAUSE_ASYNC_TASK_HPP
 #define UNPAUSE_ASYNC_TASK_HPP
 
-#include <tuple>
+#include <functional>
 #include <utility>
+#include <tuple>
 
 namespace unpause { namespace async {
     
@@ -41,7 +42,7 @@ namespace unpause { namespace async {
         using result_type = typename std::result_of<R(Args...)>::type;
         using after_type = typename detail::task_after<result_type>::function_type;
         
-        task(R&& r, Args&&... a) : func(std::move(r)), args(std::forward<Args...>(a)...) {};
+        task(R&& r, Args... a) : func(std::move(r)), args(std::forward<Args>(a)...) {};
         
         virtual void run_v() {
             (*this)();
@@ -95,7 +96,7 @@ namespace unpause { namespace async {
     template<class R, class... Args>
     inline task<R,Args...> make_task(R&& r, Args&&... args)
     {
-        return task<R, Args...>(std::forward<R>(r), std::forward<Args...>(args)...);
+        return task<R, Args...>(std::forward<R>(r), std::forward<Args>(args)...);
     }
 }
 }

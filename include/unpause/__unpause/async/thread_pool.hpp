@@ -11,22 +11,27 @@
 #ifndef UNPAUSE_ASYNC_THREAD_POOL_HPP
 #define UNPAUSE_ASYNC_THREAD_POOL_HPP
 
-#include <list>
+#include <unpause/__unpause/async/task_queue.hpp>
+
+#include <condition_variable>
 #include <thread>
-#include <atomic>
+#include <list>
+
+#include <iostream>
 
 namespace unpause { namespace async {
     
     class thread_pool
     {
     public:
-        thread_pool(int thread_count = 8) : exiting(false) {
+        thread_pool(int thread_count = std::thread::hardware_concurrency()) : exiting(false) {
             for(int i = 0 ; i < thread_count ; i++ ) {
                 threads.push_back(std::thread(std::bind(&thread_pool::thread_func, this)));
             }
         };
         ~thread_pool() {
             exiting = true;
+            tasks.complete = true;
             task_waiter.notify_all();
             for(auto & it : threads) {
                 if(it.joinable()) {
