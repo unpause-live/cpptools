@@ -25,6 +25,6 @@ jobs:
       - run:
           name: run tests
           command: |
-          pushd test
-          make test
-          popd
+            pushd test
+            make test
+            popd
