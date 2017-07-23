@@ -11,7 +11,10 @@
 #ifndef UNPAUSE_ASYNC_THREAD_POOL_HPP
 #define UNPAUSE_ASYNC_THREAD_POOL_HPP
 
-#include <unpause/__unpause/async/task_queue.hpp>
+#include <list>
+#include <thread>
+#include <atomic>
+
 
 #include <condition_variable>
 #include <thread>
@@ -42,22 +45,20 @@ namespace unpause { namespace async {
         
         task_queue tasks;
         std::condition_variable task_waiter;
+        std::mutex task_mutex;
         
     private:
         void thread_func() {
             while(!exiting.load()) {
                 std::unique_lock<std::mutex> lk(task_mutex);
                 task_waiter.wait(lk, [this]{ return tasks.has_next() || exiting.load(); });
-                lk.unlock();
-                if(!exiting.load() && tasks.has_next()) {
+                if(!exiting.load()) {
                     tasks.next();
                 }
             }
         }
         std::list<std::thread> threads;
-        std::atomic<bool> exiting;
-        std::mutex task_mutex;
-        
+        std::atomic<bool> exiting; 
     };
     
 }

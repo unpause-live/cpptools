@@ -11,11 +11,9 @@
 #ifndef UNPAUSE_ASYNC_TASK_QUEUE_HPP
 #define UNPAUSE_ASYNC_TASK_QUEUE_HPP
 
-#include <unpause/__unpause/async/task.hpp>
-
 #include <memory>
 #include <atomic>
-#include <queue>
+#include <deque>
 #include <mutex>
 
 namespace unpause { namespace async {
@@ -26,39 +24,34 @@ namespace unpause { namespace async {
         
         template<class R, class... Args>
         void add(task<R, Args...>& t) {
+            std::unique_ptr<detail::task_container> nt = std::make_unique<task<R, Args...>>(std::forward<task<R, Args...>>(t));
             mutex_internal.lock();
-            std::unique_ptr<detail::task_container> nt = std::make_unique<task<R, Args...>>(t);
-            tasks.push(std::move(nt));
+            tasks.push_back(std::move(nt));
             mutex_internal.unlock();
         }
         
         void add(std::unique_ptr<detail::task_container>&& task) {
             mutex_internal.lock();
-            tasks.push(std::move(task));
+            tasks.push_back(std::move(task));
             mutex_internal.unlock();
         }
         
         template<class R, class... Args>
         void add(R&& r, Args&&... a) {
             std::unique_ptr<detail::task_container> t;
+            t = std::make_unique<task<R, Args...>>(std::forward<R>(r), std::forward<Args>(a)...);
             mutex_internal.lock();
-            t = std::make_unique<task<R, Args...>>(std::forward<R>(r), std::forward<Args...>(a)...);
-            tasks.push(std::move(t));
+            tasks.push_back(std::move(t));
             mutex_internal.unlock();
         }
         
         bool next() {
-            mutex_internal.lock();
-            if(tasks.size() > 0 && !complete.load()) {
-                auto f = std::move(tasks.front());
-                tasks.pop();
-                mutex_internal.unlock();
-                if(f) {
-                    f->run_v();    
-                }
-            } else {
-                mutex_internal.unlock();
+            auto f = next_pop();
+            
+            if(f && !complete.load()) {
+                f->run_v();
             }
+            
             return has_next();
         }
         
@@ -66,10 +59,21 @@ namespace unpause { namespace async {
             return tasks.size() > 0;
         }
         
-        std::queue<std::unique_ptr<detail::task_container>> tasks;
+        std::unique_ptr<detail::task_container> next_pop() {
+            mutex_internal.lock();
+            std::unique_ptr<detail::task_container> f;
+            if(has_next()) {
+                f = std::move(tasks.front());
+                tasks.pop_front();
+            }
+            mutex_internal.unlock();
+            return f;
+        }
+        
         std::mutex task_mutex;
         std::atomic<bool> complete;
     private:
+        std::deque<std::unique_ptr<detail::task_container>> tasks;
         std::mutex mutex_internal;
         
     };

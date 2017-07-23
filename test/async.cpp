@@ -1,6 +1,7 @@
 #include <unpause/async>
 #include <stdio.h>
 #include <assert.h>
+#include <vector>
 
 #define log_v(x, ...) printf("%3d:\t" x "\n", __LINE__, ##__VA_ARGS__);
 #define log(x) printf("%3d:\t" x "\n", __LINE__);
@@ -83,7 +84,7 @@ void task_queue_test()
 		log("argument passing tasks");
 		async::task_queue queue;
 		int val = 0;
-		const int n = 1000;
+		const int n = 10000;
 		for(int i = 1 ; i <= n ; i++) {
 			queue.add([&](int in) { val += in; }, (int)i);
 		}
@@ -97,7 +98,7 @@ void task_queue_test()
 		log("task passing with after");
 		async::task_queue queue;
 		int val = 0;
-		const int n = 1000;
+		const int n = 10000;
 		for(int i = 1 ; i <= n ; i++) {
 			auto t = async::make_task([&](int in) { val += in; return in; }, (int)i);
 			t.after = [&](int i){ val += i; };
@@ -117,7 +118,7 @@ void thread_pool_test()
 	{
 		log("async dispatch on any thread");
 		std::atomic<int> val(0);
-		const int n = 1000;
+		const int n = 10000;
 		std::atomic<int> ct(n);
 		{
 			async::thread_pool pool;
@@ -135,7 +136,7 @@ void thread_pool_test()
 	{
 		log("sync dispatch on any thread");
 		std::atomic<int> val(0);
-		const int n = 1000;
+		const int n = 10000;
 		std::atomic<int> ct(n);
 		{
 			async::thread_pool pool;
@@ -153,7 +154,7 @@ void thread_pool_test()
 	{
 		log("async dispatch in a serial queue");
 		std::vector<int> res;
-		const int n = 1000;
+		const int n = 10000;
 		res.reserve(n);
 		std::atomic<int> ct(n);
 		std::mutex m;
@@ -165,9 +166,14 @@ void thread_pool_test()
 				res.push_back(val);
 				m.unlock();
 				--ct;
+				/*if(val%1000) {
+					log_v("%d", val);
+				}*/
 			}, (int)i);
 		}
-		while(ct.load() > 0);
+		while(ct.load() > 0) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
 
 		log("Checking order");
 		for(int i = 0 ; i < n ; ++i ) {

@@ -11,7 +11,6 @@
 #ifndef UNPAUSE_ASYNC_RUN_HPP
 #define UNPAUSE_ASYNC_RUN_HPP
 
-#include <unpause/__unpause/async/thread_pool.hpp>
 
 namespace unpause { namespace async {
     
@@ -25,13 +24,13 @@ namespace unpause { namespace async {
     
     template<class R, class... Args>
     void run(task_queue& queue, R&& r, Args&&... a) {
-        queue.add(std::forward<R>(r), std::forward<Args...>(a)...);
+        queue.add(std::forward<R>(r), std::forward<Args>(a)...);
         queue.next();
     }
     
     // run(thread_pool...)
     namespace detail {
-        void run(thread_pool& pool, std::unique_ptr<detail::task_container>& task) {
+        void run(thread_pool& pool, std::unique_ptr<detail::task_container>&& task) {
             pool.tasks.add(std::move(task));
             pool.task_waiter.notify_one();
         }
@@ -39,13 +38,15 @@ namespace unpause { namespace async {
     
     template<class R, class... Args>
     void run(thread_pool& pool, task<R, Args...>& t) {
+        std::lock_guard<std::mutex> guard(pool.task_mutex);
         pool.tasks.add(t);
         pool.task_waiter.notify_one();
     }
     
     template<class R, class... Args>
     void run(thread_pool& pool, R&& r, Args&&... a) {
-        pool.tasks.add(std::forward<R>(r), std::forward<Args...>(a)...);
+        std::lock_guard<std::mutex> guard(pool.task_mutex);
+        pool.tasks.add(std::forward<R>(r), std::forward<Args>(a)...);
         pool.task_waiter.notify_one();
     }
     
@@ -60,25 +61,29 @@ namespace unpause { namespace async {
                     after();
                 }
                 if(!queue.complete.load() && queue.has_next()) {
-                    auto next = std::move(queue.tasks.front());
-                    queue.tasks.pop();
-                    detail::run(pool, next);
+                    auto next = queue.next_pop();
+                    if(next) {
+                        detail::run(pool, std::move(next));
+                    }
                 } else {
                     queue.task_mutex.unlock();
                 }
             };
+            
             queue.add(t);
+            
             if(queue.task_mutex.try_lock()) {
-                auto next = std::move(queue.tasks.front());
-                queue.tasks.pop();
-                detail::run(pool, next);
+                auto next = queue.next_pop();
+                if(next) {
+                    detail::run(pool, std::move(next));
+                }
             }
         }
     }
     template<class R, class... Args>
     void run(thread_pool& pool, task_queue& queue, R&& r, Args&&... a) {
         if(!queue.complete.load()) {
-            auto t = make_task(std::forward<R>(r), std::forward<Args...>(a)...);
+            auto t = make_task(std::forward<R>(r), std::forward<Args>(a)...);
             run(pool, queue, t);
         }
     }
@@ -91,17 +96,18 @@ namespace unpause { namespace async {
         std::atomic<bool> d(false);
         std::function<void()> after = std::move(t.after_internal);
         
-        t.after_internal = [&v,&d, after = std::move(after)] {
-            d = true;
+        t.after_internal = [&, after = std::move(after)] {
             if(after) {
                 after();
             }
+            std::lock_guard<std::mutex> guard(m);
+            d = true;
             v.notify_one();
         };
-        run(pool, t);
         
+        run(pool, t);
         std::unique_lock<std::mutex> lk(m);
-        v.wait(lk, [&d] { return d.load(); });
+        v.wait(lk, [&] { return d.load(); });
     }
     
     template<class R, class... Args>
@@ -119,17 +125,20 @@ namespace unpause { namespace async {
             std::atomic<bool> d(false);
             std::function<void()> after = std::move(t.after_internal);
             
-            t.after_internal = [&v,&d, after = std::move(after)] {
-                d = true;
+            t.after_internal = [&, after = std::move(after)] {
+                
                 if(after) {
                     after();
                 }
+                d = true;
+                std::lock_guard<std::mutex> guard(m);
                 v.notify_one();
             };
             
             run(pool, queue, t);
             
             std::unique_lock<std::mutex> lk(m);
+            
             v.wait(lk, [&d] { return d.load(); });
         }
     }

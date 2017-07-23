@@ -30,6 +30,12 @@ namespace unpause { namespace async {
             using function_type = std::function<void()>;
         };
         struct task_container {
+            task_container() {};
+            task_container(task_container&& other)
+            : before_internal(std::move(other.before_internal))
+            , after_internal(std::move(other.after_internal)) {};
+            
+            virtual ~task_container() {};
             virtual void run_v() = 0;
             std::function<void()> before_internal; // used for task_queue
             std::function<void()> after_internal; // used for task_queue
@@ -52,8 +58,8 @@ namespace unpause { namespace async {
             return run(std::integral_constant<bool, std::is_same<result_type, void>::value>(), std::index_sequence_for<Args...>{});
         }
         
-        task(const task<R, Args...>& rhs)
-        : detail::task_container(rhs)
+        task(task<R, Args...>&& rhs)
+        : detail::task_container(std::forward<detail::task_container>(rhs))
         , func(std::move(rhs.func))
         , args(std::move(rhs.args))
         , after(std::move(rhs.after)) {};
