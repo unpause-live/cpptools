@@ -18,4 +18,13 @@ jobs:
             sudo apt-get install -y gcc-5 g++-5
       - run:
           name: build tests
-          command: 'cd test; make; make test;'
+          command: |
+            pushd test
+            make
+            popd
+      - run:
+          name: run tests
+          command: |
+          pushd test
+          make test
+          popd
