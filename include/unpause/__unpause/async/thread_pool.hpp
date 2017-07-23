@@ -11,16 +11,10 @@
 #ifndef UNPAUSE_ASYNC_THREAD_POOL_HPP
 #define UNPAUSE_ASYNC_THREAD_POOL_HPP
 
-#include <list>
-#include <thread>
-#include <atomic>
-
-
 #include <condition_variable>
+#include <atomic>
 #include <thread>
 #include <list>
-
-#include <iostream>
 
 namespace unpause { namespace async {
     
