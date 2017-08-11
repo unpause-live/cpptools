@@ -148,6 +148,20 @@ namespace unpause { namespace async {
         auto t = make_task(r, a...);
         run_sync(pool, queue, t);
     }
+    
+    // schedule
+    template<class R, class... Args>
+    void schedule(thread_pool& pool, std::chrono::steady_clock::time_point point, R&& r, Args&&... a) {
+        auto w = make_task([] (thread_pool& pool, R&& r, Args&&... a){
+            run(pool, r, a...);
+        }, pool, std::forward<R>(r), std::forward<Args>(a)...);
+        w.dispatch_time = point;
+        if(!pool.runloop) {
+            pool.runloop.emplace();
+        }
+        pool.runloop->queue.add(w);
+        pool.runloop->notify();
+    }
 }
 }
 #endif /* UNPAUSE_ASYNC_RUN_HPP */

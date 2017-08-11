@@ -34,7 +34,8 @@ namespace unpause { namespace async {
             task_container() : dispatch_time(std::chrono::steady_clock::now()) {};
             task_container(task_container&& other)
             : before_internal(std::move(other.before_internal))
-            , after_internal(std::move(other.after_internal)) {};
+            , after_internal(std::move(other.after_internal))
+            , dispatch_time(std::move(other.dispatch_time)){};
             
             virtual ~task_container() {};
             virtual void run_v() = 0;
