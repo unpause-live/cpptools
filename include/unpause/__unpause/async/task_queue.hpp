@@ -12,6 +12,7 @@
 #define UNPAUSE_ASYNC_TASK_QUEUE_HPP
 
 #include <experimental/optional>
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <atomic>
