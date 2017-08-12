@@ -17,11 +17,11 @@
 
 namespace unpause { namespace async {
 
-	class run_loop {
+    class run_loop {
 
-	public:
+    public:
         run_loop() : exiting_(false), dirty_(false), looper_(&run_loop::loop, this) {};
-		~run_loop() {
+        ~run_loop() {
             exiting_ = true;
             cond_.notify_one();
             if(looper_.joinable()) {
@@ -62,11 +62,11 @@ namespace unpause { namespace async {
         };
         
         
-	private:
+    private:
         std::atomic<bool> exiting_;
         std::atomic<bool> dirty_;
-		std::thread looper_;
-		std::condition_variable cond_;
+        std::thread looper_;
+        std::condition_variable cond_;
         std::mutex mutex_;
     };
 }
