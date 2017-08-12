@@ -13,6 +13,7 @@
 
 #include <functional>
 #include <utility>
+#include <chrono>
 #include <tuple>
 
 namespace unpause { namespace async {
@@ -30,15 +31,17 @@ namespace unpause { namespace async {
             using function_type = std::function<void()>;
         };
         struct task_container {
-            task_container() {};
+            task_container() : dispatch_time(std::chrono::steady_clock::now()) {};
             task_container(task_container&& other)
             : before_internal(std::move(other.before_internal))
-            , after_internal(std::move(other.after_internal)) {};
+            , after_internal(std::move(other.after_internal))
+            , dispatch_time(std::move(other.dispatch_time)){};
             
             virtual ~task_container() {};
             virtual void run_v() = 0;
             std::function<void()> before_internal; // used for task_queue
             std::function<void()> after_internal; // used for task_queue
+            std::chrono::steady_clock::time_point dispatch_time; // used for run_loop
         };
     }
     

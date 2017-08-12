@@ -12,6 +12,7 @@
 #define UNPAUSE_ASYNC_THREAD_POOL_HPP
 
 #include <condition_variable>
+#include <experimental/optional>
 #include <atomic>
 #include <thread>
 #include <list>
@@ -21,16 +22,16 @@ namespace unpause { namespace async {
     class thread_pool
     {
     public:
-        thread_pool(int thread_count = std::thread::hardware_concurrency()) : exiting(false) {
+        thread_pool(int thread_count = std::thread::hardware_concurrency()) : exiting_(false) {
             for(int i = 0 ; i < thread_count ; i++ ) {
-                threads.push_back(std::thread(std::bind(&thread_pool::thread_func, this)));
+                threads_.push_back(std::thread(std::bind(&thread_pool::thread_func, this)));
             }
         };
         ~thread_pool() {
-            exiting = true;
+            exiting_ = true;
             tasks.complete = true;
             task_waiter.notify_all();
-            for(auto & it : threads) {
+            for(auto & it : threads_) {
                 if(it.joinable()) {
                     it.join();
                 }
@@ -40,19 +41,20 @@ namespace unpause { namespace async {
         task_queue tasks;
         std::condition_variable task_waiter;
         std::mutex task_mutex;
+        std::experimental::optional<run_loop> runloop;
         
     private:
         void thread_func() {
-            while(!exiting.load()) {
+            while(!exiting_.load()) {
                 std::unique_lock<std::mutex> lk(task_mutex);
-                task_waiter.wait(lk, [this]{ return tasks.has_next() || exiting.load(); });
-                if(!exiting.load()) {
+                task_waiter.wait(lk, [this]{ return tasks.has_next() || exiting_.load(); });
+                if(!exiting_.load()) {
                     tasks.next();
                 }
             }
         }
-        std::list<std::thread> threads;
-        std::atomic<bool> exiting; 
+        std::list<std::thread> threads_;
+        std::atomic<bool> exiting_;
     };
     
 }

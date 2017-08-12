@@ -13,6 +13,7 @@
 
 #include <unpause/__unpause/async/task.hpp>
 #include <unpause/__unpause/async/task_queue.hpp>
+#include <unpause/__unpause/async/run_loop.hpp>
 #include <unpause/__unpause/async/thread_pool.hpp>
 #include <unpause/__unpause/async/run.hpp>
 
