@@ -263,6 +263,36 @@ void run_loop_test() {
         log_v("Diff3=%" PRId64, diff3);
         assert(diff3 <= 5000000 && diff3 >= 4500000);
     }
+    {
+        log("schedule with loop");
+        async::run_loop loop;
+        auto start = std::chrono::steady_clock::now();
+        auto end1 = start;
+        auto end2 = start;
+        auto end3 = start;
+        async::schedule(loop, std::chrono::seconds(3) + std::chrono::steady_clock::now(), [&end2] {
+            log("3s...");
+            end2 = std::chrono::steady_clock::now();
+        });
+        async::schedule(loop, std::chrono::milliseconds(2500) + std::chrono::steady_clock::now(), [&end1] {
+            log("2.5s...");
+            end1 = std::chrono::steady_clock::now();
+        });
+        async::schedule(loop, std::chrono::seconds(4) + std::chrono::steady_clock::now(), [&end3] {
+            log("4s...");
+            end3 = std::chrono::steady_clock::now();
+        });
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        auto diff1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start).count();
+        log_v("Diff=%" PRId64, diff1);
+        assert(diff1 <= 3000000);
+        auto diff2 = std::chrono::duration_cast<std::chrono::microseconds>(end2 - start).count();
+        log_v("Diff2=%" PRId64, diff2);
+        assert(diff2 <= 3500000);
+        auto diff3 = std::chrono::duration_cast<std::chrono::microseconds>(end3 - start).count();
+        log_v("Diff3=%" PRId64, diff3);
+        assert(diff3 <= 4500000);
+    }
 }
 int main(void)
 {
