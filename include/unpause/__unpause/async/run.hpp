@@ -150,11 +150,14 @@ namespace unpause { namespace async {
     }
     
     // schedule
+    
     template<class R, class... Args>
-    void schedule(thread_pool& pool, std::chrono::steady_clock::time_point point, R&& r, Args&&... a) {
-        auto w = make_task([] (thread_pool& pool, R&& r, Args&&... a){
-            run(pool, r, a...);
-        }, pool, std::forward<R>(r), std::forward<Args>(a)...);
+    void schedule(thread_pool& pool, std::chrono::steady_clock::time_point point, task<R, Args...>&& t) {
+        
+        auto w = make_task([] (thread_pool& pool, task<R, Args...>&& tsk){
+            run(pool, tsk);
+        }, pool, std::move(t));
+        
         w.dispatch_time = point;
         if(!pool.runloop) {
             pool.runloop.emplace();
@@ -164,10 +167,15 @@ namespace unpause { namespace async {
     }
     
     template<class R, class... Args>
-    void schedule(thread_pool& pool, task_queue& queue, std::chrono::steady_clock::time_point point, R&& r, Args&&... a) {
-        auto w = make_task([] (thread_pool& pool, task_queue& queue, R&& r, Args&&... a){
-            run(pool, queue, r, a...);
-        }, pool, queue, std::forward<R>(r), std::forward<Args>(a)...);
+    void schedule(thread_pool& pool, std::chrono::steady_clock::time_point point, R&& r, Args&&... a) {
+        schedule(pool, point, make_task(std::forward<R>(r), std::forward<Args>(a)...));
+    }
+    
+    template<class R, class... Args>
+    void schedule(thread_pool& pool, task_queue& queue, std::chrono::steady_clock::time_point point, task<R, Args...>&& t) {
+        auto w = make_task([] (thread_pool& pool, task_queue& queue, task<R, Args...>&& t){
+            run(pool, queue, t);
+        }, pool, queue, std::move(t));
         w.dispatch_time = point;
         if(!pool.runloop) {
             pool.runloop.emplace();
@@ -175,24 +183,36 @@ namespace unpause { namespace async {
         pool.runloop->queue.add(w);
         pool.runloop->notify();
     }
-
+    template<class R, class... Args>
+    void schedule(thread_pool& pool, task_queue& queue, std::chrono::steady_clock::time_point point, R&& r, Args&&... a) {
+        schedule(pool, queue, point, make_task(std::forward<R>(r), std::forward<Args>(a)...));
+    }
+    
+    template<class R, class... Args>
+    void schedule(run_loop& loop, task_queue& queue, std::chrono::steady_clock::time_point point, task<R, Args...>&& t) {
+        auto w = make_task([] (thread_pool& pool, task_queue& queue, task<R, Args...>&& t){
+            run(queue, t);
+        }, queue, std::move(t));
+        w.dispatch_time = point;
+        loop.queue.add(w);
+        loop.notify();
+    }
     
     template<class R, class... Args>
     void schedule(run_loop& loop, task_queue& queue, std::chrono::steady_clock::time_point point, R&& r, Args&&... a) {
-        auto w = make_task([] (thread_pool& pool, task_queue& queue, R&& r, Args&&... a){
-            run(queue, r, a...);
-        }, queue, std::forward<R>(r), std::forward<Args>(a)...);
-        w.dispatch_time = point;
-        loop.queue.add(w);
+        schedule(loop, queue, point, make_task(std::forward<R>(r), std::forward<Args>(a)...));
+    }
+    
+    template<class R, class... Args>
+    void schedule(run_loop& loop, std::chrono::steady_clock::time_point point, task<R, Args...>&& t) {
+        t.dispatch_time = point;
+        loop.queue.add(t);
         loop.notify();
     }
-
+    
     template<class R, class... Args>
     void schedule(run_loop& loop, std::chrono::steady_clock::time_point point, R&& r, Args&&... a) {
-        auto w = make_task(std::forward<R>(r), std::forward<Args>(a)...);
-        w.dispatch_time = point;
-        loop.queue.add(w);
-        loop.notify();
+        schedule(loop, point, make_task(std::forward<R>(r), std::forward<Args>(a)...));
     }
 }
 }
