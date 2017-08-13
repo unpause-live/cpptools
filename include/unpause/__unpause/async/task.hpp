@@ -91,7 +91,7 @@ namespace unpause { namespace async {
             if(before_internal) {
                 before_internal();
             }
-            auto res = func(std::get<I>(args) ...);
+            auto res = func(std::get<I>(std::forward<std::tuple<Args...>>(args)) ...);
             if(after) {
                 after(res);
             }
