@@ -30,7 +30,7 @@ namespace unpause { namespace async {
     
     // run(thread_pool...)
     namespace detail {
-        void run(thread_pool& pool, std::unique_ptr<detail::task_container>&& task) {
+        inline void run(thread_pool& pool, std::unique_ptr<detail::task_container>&& task) {
             pool.tasks.add(std::move(task));
             pool.task_waiter.notify_one();
         }
