@@ -76,6 +76,8 @@ namespace unpause { namespace async {
                 auto next = queue.next_pop();
                 if(next) {
                     detail::run(pool, std::move(next));
+                } else {
+                    queue.task_mutex.unlock();
                 }
             }
         }

@@ -2,7 +2,7 @@ BASE=..
 BUILD_DIR=$(BASE)/build
 OUTPUT_DIR=$(BASE)/test/build
 
-CFLAGS=-std=c++14 -pthread -c -fPIC -O2 -I$(BASE)/include -Wpedantic -Wall -Werror 
+CFLAGS=-std=c++14 -pthread -c -fPIC -O2 -I$(BASE)/include -Wpedantic -Wall -Werror
 LDFLAGS=-lpthread -L$(BUILD_DIR) 
 CC=g++-5
 

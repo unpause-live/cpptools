@@ -46,7 +46,7 @@ namespace unpause { namespace async {
                 auto next_time = queue.next_dispatch_time();
                 if(next_time == std::chrono::steady_clock::time_point::min()) {
                     cond_.wait(lk, [=]{ return exiting_.load() || queue.has_next(); });
-                } else {
+                } else if(std::chrono::steady_clock::now() < next_time) {
                     cond_.wait_until(lk, next_time, [=] {
                         auto now = std::chrono::steady_clock::now();
                         return exiting_.load() || queue.next_dispatch_time() <= now || dirty_.load();

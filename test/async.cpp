@@ -20,6 +20,8 @@
 #define log_v(x, ...) printf("%3d:\t" x "\n", __LINE__, ##__VA_ARGS__);
 #define log(x) printf("%3d:\t" x "\n", __LINE__);
 
+static const uint64_t iterations = 1000000;
+
 void task_test() {
     log("------- Testing async::task -------");
     using namespace unpause;
@@ -97,13 +99,13 @@ void task_queue_test()
     {
         log("argument passing tasks");
         async::task_queue queue;
-        int val = 0;
-        const int n = 10000;
-        for(int i = 1 ; i <= n ; i++) {
-            queue.add([&](int in) { val += in; }, (int)i);
+        uint64_t val = 0;
+        const uint64_t n = iterations;
+        for(uint64_t i = 1 ; i <= n ; i++) {
+            queue.add([&](uint64_t in) { val += in; }, (uint64_t)i);
         }
         while(queue.next());
-        log_v("val=%d n=%d t=%d", val, n, (n*(n+1)/2));
+        log_v("val=%" PRId64 " n=%" PRId64 " t=%" PRId64, val, n, (n*(n+1)/2));
         assert(val==(n*(n+1)/2));
         log("OK");
     }
@@ -111,15 +113,15 @@ void task_queue_test()
     {
         log("task passing with after");
         async::task_queue queue;
-        int val = 0;
-        const int n = 10000;
-        for(int i = 1 ; i <= n ; i++) {
-            auto t = async::make_task([&](int in) { val += in; return in; }, (int)i);
-            t.after = [&](int i){ val += i; };
+        uint64_t val = 0;
+        const uint64_t n = iterations;
+        for(uint64_t i = 1 ; i <= n ; i++) {
+            auto t = async::make_task([&](uint64_t in) { val += in; return in; }, (uint64_t)i);
+            t.after = [&](uint64_t i){ val += i; };
             queue.add(t);
         }
         while(queue.next());
-        log_v("val=%d n=%d t=%d", val, n, (n*(n+1)/2)*2);
+        log_v("val=%" PRId64 " n=%" PRId64 " t=%" PRId64, val, n, (n*(n+1)/2));
         assert(val==(n*(n+1)/2)*2);
         log("OK");
     }
@@ -131,44 +133,44 @@ void thread_pool_test()
     log("------- Testing async::thread_pool -------");
     {
         log("async dispatch on any thread");
-        std::atomic<int> val(0);
-        const int n = 10000;
-        std::atomic<int> ct(n);
+        std::atomic<uint64_t> val(0);
+        const uint64_t n = iterations;
+        std::atomic<uint64_t> ct(n);
         {
             async::thread_pool pool;
-            for(int i = 1 ; i <= n ; i++)  {
-                async::run(pool, [&](int in) { val += in; --ct; }, (int)i);
+            for(uint64_t i = 1 ; i <= n ; i++)  {
+                async::run(pool, [&](uint64_t in) { val += in; --ct; }, (uint64_t)i);
             }
             while(ct.load() > 0) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
-        log_v("val=%d n=%d t=%d", val.load(), n, (n*(n+1)/2));
+        log_v("val=%" PRId64 " n=%" PRId64 " t=%" PRId64, val.load(), n, (n*(n+1)/2));
         assert(val==(n*(n+1)/2));
         log("OK");
     }
     {
         log("sync dispatch on any thread");
-        std::atomic<int> val(0);
-        const int n = 10000;
-        std::atomic<int> ct(n);
+        std::atomic<uint64_t> val(0);
+        const uint64_t n = iterations;
+        std::atomic<uint64_t> ct(n);
         {
             async::thread_pool pool;
-            for(int i = 1 ; i <= n ; i++)  {
-                async::run_sync(pool, [&](int in) { val += in; --ct;}, (int)i);
+            for(uint64_t i = 1 ; i <= n ; i++)  {
+                async::run_sync(pool, [&](uint64_t in) { val += in; --ct;}, (uint64_t)i);
             }
             while(ct.load() > 0) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
-        log_v("val=%d n=%d t=%d", val.load(), n, (n*(n+1)/2));
+        log_v("val=%" PRId64 " n=%" PRId64 " t=%" PRId64, val.load(), n, (n*(n+1)/2));
         assert(val==(n*(n+1)/2));
         log("OK");
     }
     {
         log("async dispatch in a serial queue");
         std::vector<int> res;
-        const int n = 10000;
+        const int n = iterations;
         res.reserve(n);
         std::atomic<int> ct(n);
         std::mutex m;
