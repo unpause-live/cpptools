@@ -114,10 +114,6 @@ namespace unpause { namespace async {
                 }
                 n = n->next;
             }
-            n = head.load();
-            while(n) {
-                n = n->next;
-            }
             sort_push_mutex_.unlock();
             sort_pop_mutex_.unlock();
         }
