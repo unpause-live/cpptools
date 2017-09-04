@@ -85,6 +85,7 @@ namespace unpause { namespace async {
                 if(old_head == old_tail) {
                     head.store(nullptr, std::memory_order_release);
                 }
+                delete old_tail;
             }
             sort_pop_mutex_.unlock();
             return f;
