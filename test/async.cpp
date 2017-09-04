@@ -20,7 +20,7 @@
 #define log_v(x, ...) printf("%3d:\t" x "\n", __LINE__, ##__VA_ARGS__);
 #define log(x) printf("%3d:\t" x "\n", __LINE__);
 
-static const uint64_t iterations = 1000000;
+static const uint64_t iterations = 500000;
 
 void task_test() {
     log("------- Testing async::task -------");
@@ -223,13 +223,13 @@ void run_loop_test() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         auto diff1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start).count();
         log_v("Diff=%" PRId64, diff1);
-        assert(diff1 <= 3000000);
+        assert(diff1 <= 3000000 && diff1 > 2500000);
         auto diff2 = std::chrono::duration_cast<std::chrono::microseconds>(end2 - start).count();
         log_v("Diff2=%" PRId64, diff2);
-        assert(diff2 <= 3500000);
+        assert(diff2 <= 3500000 && diff2 > 3000000);
         auto diff3 = std::chrono::duration_cast<std::chrono::microseconds>(end3 - start).count();
         log_v("Diff3=%" PRId64, diff3);
-        assert(diff3 <= 4500000);
+        assert(diff3 <= 4500000 && diff3 > 4000000);
     }
     {
         log("schedule with thread pool and queue");
@@ -257,13 +257,13 @@ void run_loop_test() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         auto diff1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start).count();
         log_v("Diff=%" PRId64, diff1);
-        assert(diff1 <= 3000000);
+        assert(diff1 <= 3000000 && diff1 > 2500000);
         auto diff2 = std::chrono::duration_cast<std::chrono::microseconds>(end2 - start).count();
         log_v("Diff2=%" PRId64, diff2);
-        assert(diff2 <= 4000000);
+        assert(diff2 <= 4000000 && diff2 > 3000000);
         auto diff3 = std::chrono::duration_cast<std::chrono::microseconds>(end3 - start).count();
         log_v("Diff3=%" PRId64, diff3);
-        assert(diff3 <= 5000000 && diff3 >= 4500000);
+        assert(diff3 <= 5000000 && diff3 > 4500000);
     }
     {
         log("schedule with loop");
@@ -287,13 +287,13 @@ void run_loop_test() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         auto diff1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start).count();
         log_v("Diff=%" PRId64, diff1);
-        assert(diff1 <= 3000000);
+        assert(diff1 <= 3000000 && diff1 > 2500000);
         auto diff2 = std::chrono::duration_cast<std::chrono::microseconds>(end2 - start).count();
         log_v("Diff2=%" PRId64, diff2);
-        assert(diff2 <= 3500000);
+        assert(diff2 <= 3500000 && diff2 > 3000000);
         auto diff3 = std::chrono::duration_cast<std::chrono::microseconds>(end3 - start).count();
         log_v("Diff3=%" PRId64, diff3);
-        assert(diff3 <= 4500000);
+        assert(diff3 <= 4500000 && diff3 > 4000000);
     }
 }
 int main(void)
