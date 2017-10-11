@@ -13,6 +13,7 @@
 
 #include <experimental/optional>
 #include <algorithm>
+#include <thread>
 #include <chrono>
 #include <memory>
 #include <atomic>
@@ -26,10 +27,12 @@ namespace unpause { namespace async {
     {
 
     public:
-        task_queue() : complete(false), head(nullptr), tail(nullptr) {};
+        task_queue() : complete(false), head(nullptr), tail(nullptr), end_sem_(0) {};
         task_queue(const task_queue& other) = delete;
         task_queue(task_queue&& other) = delete;
-        ~task_queue() { complete = true; end_mutex_.lock(); }
+
+        // TODO: replace with a more robust semaphore implementation.
+        ~task_queue() { complete = true; while(end_sem_.load() > 0) { std::this_thread::yield(); } }
 
         void add(std::unique_ptr<detail::task_container>&& task) {
             sort_push_mutex_.lock();
@@ -63,7 +66,7 @@ namespace unpause { namespace async {
 
         bool next() {
             auto f = next_pop();
-            end_mutex_.lock();
+            ++end_sem_;
             if(f && !complete.load()) {
                 f->run_v();
             }
@@ -71,7 +74,7 @@ namespace unpause { namespace async {
             if(!complete.load()) {
                 result = has_next();
             }
-            end_mutex_.unlock();
+            --end_sem_;
             return result;
         }   
 
@@ -141,7 +144,7 @@ namespace unpause { namespace async {
 
         std::mutex sort_push_mutex_;
         std::mutex sort_pop_mutex_;
-        std::mutex end_mutex_;
+        std::atomic<int> end_sem_;
     };
 }
 }

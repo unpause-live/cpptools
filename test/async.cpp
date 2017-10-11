@@ -7,10 +7,9 @@
  *  See the file LICENSE included with this distribution for more
  *  information.
  */
-#include <iostream>
-
 #include <unpause/async>
 
+#include <iostream>
 #include <random>
 
 #include <stdio.h>
@@ -19,6 +18,8 @@
 
 #define log_v(x, ...) printf("%3d:\t" x "\n", __LINE__, ##__VA_ARGS__);
 #define log(x) printf("%3d:\t" x "\n", __LINE__);
+
+
 
 static const uint64_t iterations = 500000;
 
@@ -296,11 +297,53 @@ void run_loop_test() {
         assert(diff3 <= 4500000 && diff3 > 4000000);
     }
 }
+
+void interleave_test() {
+
+    log("------- Testing interleaving queues with thread pool -------");
+    using namespace unpause;
+
+    async::thread_pool p;
+    async::task_queue q1;
+    async::task_queue q2;
+
+    std::atomic<int> val1(0);
+    std::atomic<int> val2(0);
+
+    async::run(p, q1, [&val1]{
+        assert(val1.load() == 0);
+        val1++;
+    });
+    async::run(p, q1, [&val1]{
+        assert(val1.load() == 1);
+        val1++;
+    });
+    async::run(p, q2, [&val2]{
+        assert(val2.load() == 0);
+        val2++;
+    });
+    
+    async::run(p, q1, [&q2, &p, &val1]{
+        assert(val1.load() == 2);
+        val1++;
+        async::run_sync(p, q2, [&val1]{
+            assert(val1.load() == 3);
+            val1++;
+        });
+    });
+
+    async::run_sync(p, q1, [&val1]{
+        assert(val1.load() == 4);
+    });
+    log("OK");
+}
+
 int main(void)
 {
     task_test();
     task_queue_test();
     thread_pool_test();
     run_loop_test();
+    interleave_test();
     return 0;
 }

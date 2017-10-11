@@ -48,8 +48,10 @@ namespace unpause { namespace async {
             while(!exiting_.load()) {
                 std::unique_lock<std::mutex> lk(task_mutex);
                 task_waiter.wait(lk, [this]{ return tasks.has_next() || exiting_.load(); });
-                if(!exiting_.load()) {
-                    tasks.next();
+                auto f = tasks.next_pop();
+                lk.unlock();
+                if(f && !exiting_.load()) {
+                    f->run_v();
                 }
             }
         }
