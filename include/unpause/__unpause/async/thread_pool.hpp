@@ -47,7 +47,7 @@ namespace unpause { namespace async {
         void thread_func() {
             while(!exiting_.load()) {
                 std::unique_lock<std::mutex> lk(task_mutex);
-                task_waiter.wait(lk, [this]{ return tasks.has_next() || exiting_.load(); });
+                task_waiter.wait_for(lk, std::chrono::milliseconds(100), [this]{ return tasks.has_next() || exiting_.load(); });
                 auto f = tasks.next_pop();
                 lk.unlock();
                 if(f && !exiting_.load()) {

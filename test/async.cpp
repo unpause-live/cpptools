@@ -7,19 +7,24 @@
  *  See the file LICENSE included with this distribution for more
  *  information.
  */
-#include <unpause/async>
+
 
 #include <iostream>
 #include <random>
+#include <atomic>
 
 #include <stdio.h>
 #include <assert.h>
 #include <inttypes.h>
 
-#define log_v(x, ...) printf("%3d:\t" x "\n", __LINE__, ##__VA_ARGS__);
-#define log(x) printf("%3d:\t" x "\n", __LINE__);
+static std::atomic<int> s_order(0);
 
+static int order() { return s_order.fetch_add(1); }
 
+#define log_v(x, ...) printf("[%d] %3d:\t" x "\n",  order(), __LINE__, ##__VA_ARGS__); fflush(stdout);
+#define log(x) printf("[%d] %3d:\t" x "\n", order(), __LINE__); fflush(stdout);
+
+#include <unpause/async>
 
 static const uint64_t iterations = 500000;
 
@@ -307,34 +312,37 @@ void interleave_test() {
     async::task_queue q1;
     async::task_queue q2;
 
-    std::atomic<int> val1(0);
-    std::atomic<int> val2(0);
-
-    async::run(p, q1, [&val1]{
-        assert(val1.load() == 0);
-        val1++;
-    });
-    async::run(p, q1, [&val1]{
-        assert(val1.load() == 1);
-        val1++;
-    });
-    async::run(p, q2, [&val2]{
-        assert(val2.load() == 0);
-        val2++;
-    });
-    
-    async::run(p, q1, [&q2, &p, &val1]{
-        assert(val1.load() == 2);
-        val1++;
-        async::run_sync(p, q2, [&val1]{
-            assert(val1.load() == 3);
+    for(int i = 0 ; i < 100 ; i++) {
+        std::atomic<int> val1(0);
+        std::atomic<int> val2(0);
+        
+        async::run(p, q1, [&val1]{
+            assert(val1.load() == 0);
+            val1++;
+        
+        });
+        async::run(p, q1, [&val1]{
+            assert(val1.load() == 1);
             val1++;
         });
-    });
+        async::run(p, q2, [&val2]{
+            assert(val2.load() == 0);
+            val2++;
+        });
+        
+        async::run(p, q1, [&q2, &p, &val1]{
+            assert(val1.load() == 2);
+            val1++;
+            async::run_sync(p, q2, [&val1]{
+                assert(val1.load() == 3);
+                val1++;
+            });
+        });
 
-    async::run_sync(p, q1, [&val1]{
-        assert(val1.load() == 4);
-    });
+        async::run_sync(p, q1, [&val1]{
+            assert(val1.load() == 4);
+        });
+    }
     log("OK");
 }
 

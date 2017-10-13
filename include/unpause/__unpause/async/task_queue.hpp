@@ -19,132 +19,89 @@
 #include <atomic>
 #include <deque>
 #include <mutex>
-#include <assert.h>
 
 namespace unpause { namespace async {
-
-    class task_queue 
+    struct task_queue
     {
-
-    public:
-        task_queue() : complete(false), head(nullptr), tail(nullptr), end_sem_(0) {};
+        task_queue() : complete(false), end_sem_(0) {};
         task_queue(const task_queue& other) = delete;
         task_queue(task_queue&& other) = delete;
 
         // TODO: replace with a more robust semaphore implementation.
-        ~task_queue() { complete = true; while(end_sem_.load() > 0) { std::this_thread::yield(); } }
-
-        void add(std::unique_ptr<detail::task_container>&& task) {
-            sort_push_mutex_.lock();
-            node* new_head = new node;
-            new_head->task = std::move(task);
-            new_head->next = head.load(std::memory_order_relaxed);
-            while(!head.compare_exchange_strong(new_head->next, new_head, std::memory_order_release, std::memory_order_relaxed));
-
-            // if we don't have a tail, set it to the head.
-            if(!new_head->next) {
-                node* old_tail = nullptr;
-                tail.compare_exchange_strong(old_tail, new_head, std::memory_order_release, std::memory_order_relaxed);    
-                assert(new_head->next == old_tail);
-            } else {
-                new_head->next->prev = new_head;
-            }
-            sort_push_mutex_.unlock();
-        }
-
+        ~task_queue() { complete = true; while(end_sem_.load() > 0) { std::this_thread::yield(); } };
+        
         template<class R, class... Args>
         void add(task<R, Args...>& t) {
             std::unique_ptr<detail::task_container> nt = std::make_unique<task<R, Args...>>(std::forward<task<R, Args...>>(t));
-            add(std::move(nt));
+            mutex_internal_.lock();
+            tasks_.push_back(std::move(nt));
+            mutex_internal_.unlock();
         }
-
+        
+        void add(std::unique_ptr<detail::task_container>&& task) {
+            mutex_internal_.lock();
+            tasks_.push_back(std::move(task));
+            mutex_internal_.unlock();
+        }
+        
         template<class R, class... Args>
         void add(R&& r, Args&&... a) {
-            std::unique_ptr<detail::task_container> nt = std::make_unique<task<R, Args...>>(std::forward<R>(r), std::forward<Args>(a)...);
-            add(std::move(nt));
+            std::unique_ptr<detail::task_container> t;
+            t = std::make_unique<task<R, Args...>>(std::forward<R>(r), std::forward<Args>(a)...);
+            mutex_internal_.lock();
+            tasks_.push_back(std::move(t));
+            mutex_internal_.unlock();
         }
-
+        
         bool next() {
             auto f = next_pop();
             ++end_sem_;
             if(f && !complete.load()) {
                 f->run_v();
             }
-            bool result = false;
-            if(!complete.load()) {
-                result = has_next();
-            }
             --end_sem_;
-            return result;
-        }   
-
+            return has_next();
+        }
+        
         bool has_next() {
-            return head.load(std::memory_order_acquire) != nullptr;
+            return tasks_.size() > 0;
         }
-
-        std::unique_ptr<detail::task_container> next_pop() {
-            sort_pop_mutex_.lock();
-            std::unique_ptr<detail::task_container> f;
-
-            node* old_tail = tail.load(std::memory_order_acquire);
-
-            if(old_tail) {
-                tail.store(old_tail->prev, std::memory_order_release);
-                f = std::move(old_tail->task);
-                node* old_head = head.load(std::memory_order_acquire);
-                if(old_head == old_tail) {
-                    head.store(nullptr, std::memory_order_release);
-                }
-                delete old_tail;
-            }
-            sort_pop_mutex_.unlock();
-            return f;
-        }
-
+        
         std::chrono::steady_clock::time_point next_dispatch_time() {
-            node* t = tail.load(std::memory_order_acquire);
-            if(t) {
-                return t->task->dispatch_time;
+            std::unique_lock<std::mutex> lk(mutex_internal_);
+            if(tasks_.size() > 0) {
+                return tasks_.front()->dispatch_time;
             } else {
                 return std::chrono::steady_clock::time_point::min();
             }
         }
-
-        void sort(std::function<bool(const detail::task_container& lhs, const detail::task_container& rhs)> predicate) {
-            sort_push_mutex_.lock();
-            sort_pop_mutex_.lock();
-            node* n = head.load(std::memory_order_relaxed);
-            while(n) {
-                if(n->next) {
-                    bool swap = predicate(*n->task, *n->next->task);
-                    if(swap) {
-                        auto f1 = std::move(n->task);
-                        n->task = std::move(n->next->task);
-                        n->next->task = std::move(f1);
-                    }
-                }
-                n = n->next;
+        
+        std::unique_ptr<detail::task_container> next_pop() {
+            mutex_internal_.lock();
+            std::unique_ptr<detail::task_container> f;
+            if(has_next()) {
+                f = std::move(tasks_.front());
+                tasks_.pop_front();
             }
-            sort_push_mutex_.unlock();
-            sort_pop_mutex_.unlock();
+            mutex_internal_.unlock();
+            return f;
         }
+        
+        void sort(std::function<bool(const detail::task_container& lhs, const detail::task_container& rhs)> predicate) {
+            mutex_internal_.lock();
+            std::sort(tasks_.begin(), tasks_.end(), [predicate](std::unique_ptr<detail::task_container>& lhs, std::unique_ptr<detail::task_container>& rhs) {
+                return predicate(*lhs, *rhs);
+            });
+            mutex_internal_.unlock();
+        }
+        
         std::mutex task_mutex;
         std::atomic<bool> complete;
-
     private:
-        struct node {
-            node() : next(nullptr), prev(nullptr) {};
-            std::unique_ptr<detail::task_container> task;
-            node* next;
-            node* prev;
-        };
-
-        std::atomic<node*> head;
-        std::atomic<node*> tail;
-
-        std::mutex sort_push_mutex_;
-        std::mutex sort_pop_mutex_;
+        std::deque<std::unique_ptr<detail::task_container>> tasks_;
+        std::mutex mutex_internal_;
         std::atomic<int> end_sem_;
+        
     };
 }
 }

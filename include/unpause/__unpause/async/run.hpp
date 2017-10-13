@@ -141,7 +141,9 @@ namespace unpause { namespace async {
             
             std::unique_lock<std::mutex> lk(m);
             
-            v.wait(lk, [&d] { return d.load(); });
+            while(!d.load()) { 
+                v.wait_for(lk, std::chrono::milliseconds(100), [&d] { return d.load(); });
+            }
         }
     }
     
