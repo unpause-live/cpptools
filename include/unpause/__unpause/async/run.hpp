@@ -56,6 +56,7 @@ namespace unpause { namespace async {
     {
         if(!queue.complete.load()) {
             auto after = std::move(t.after_internal);
+            
             t.after_internal = [&, after = std::move(after)] {
                 if(after) {
                     after();
@@ -63,11 +64,14 @@ namespace unpause { namespace async {
                 if(!queue.complete.load() && queue.has_next()) {
                     auto next = queue.next_pop();
                     if(next) {
+                        queue.inc_lock(); // add in-flight
                         detail::run(pool, std::move(next));
                     }
                 } else {
                     queue.task_mutex.unlock();
                 }
+                // remove in-flight
+                queue.dec_lock();
             };
             
             queue.add(t);
@@ -75,6 +79,7 @@ namespace unpause { namespace async {
             if(queue.task_mutex.try_lock()) {
                 auto next = queue.next_pop();
                 if(next) {
+                    queue.inc_lock(); // add in-flight
                     detail::run(pool, std::move(next));
                 } else {
                     queue.task_mutex.unlock();
@@ -125,8 +130,10 @@ namespace unpause { namespace async {
             std::mutex m;
             std::condition_variable v;
             std::atomic<bool> d(false);
-            std::function<void()> after = std::move(t.after_internal);
-            
+
+            auto before = std::move(t.before_internal);
+            auto after = std::move(t.after_internal);
+
             t.after_internal = [&, after = std::move(after)] {
                 
                 if(after) {

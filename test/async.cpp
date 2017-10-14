@@ -346,6 +346,26 @@ void interleave_test() {
     log("OK");
 }
 
+void abrupt_exit_test() {
+    log("------- Testing abrupt dealloc of queue -------");
+    using namespace unpause;
+    async::thread_pool p;
+    for(int i = 0 ; i < 10000 ; i++)
+    {
+        {
+            async::task_queue q;    
+
+            for(int j = 0 ; j < 100 ; j++) {
+                async::run(p, q, [i, j] {
+                    return i*j;
+                });
+            }
+        }
+    }
+
+    log("OK");
+    
+}
 int main(void)
 {
     task_test();
@@ -353,5 +373,6 @@ int main(void)
     thread_pool_test();
     run_loop_test();
     interleave_test();
+    abrupt_exit_test();
     return 0;
 }

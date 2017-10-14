@@ -35,9 +35,11 @@ namespace unpause { namespace async {
             task_container(task_container&& other)
             : before_internal(std::move(other.before_internal))
             , after_internal(std::move(other.after_internal))
-            , dispatch_time(std::move(other.dispatch_time)){};
-            
+            , dispatch_time(std::move(other.dispatch_time)){}; 
+            task_container(const task_container& other) = delete;
+
             virtual ~task_container() {};
+
             virtual void run_v() = 0;
             std::function<void()> before_internal; // used for task_queue
             std::function<void()> after_internal; // used for task_queue
@@ -52,20 +54,20 @@ namespace unpause { namespace async {
         using after_type = typename detail::task_after<result_type>::function_type;
         
         task(R&& r, Args&&... a) : func(std::move(r)), args(std::forward<Args>(a)...) {};
-        
-        virtual void run_v() {
-            (*this)();
-        }
-        
-        result_type operator()() {
-            return run(std::integral_constant<bool, std::is_same<result_type, void>::value>(), std::index_sequence_for<Args...>{});
-        }
-        
         task(task<R, Args...>&& rhs)
         : detail::task_container(std::forward<detail::task_container>(rhs))
         , func(std::move(rhs.func))
         , args(std::move(rhs.args))
         , after(std::move(rhs.after)) {};
+        task(const task& other) = delete;
+
+        virtual ~task() {};
+
+        virtual void run_v() { (*this)(); }
+        
+        result_type operator()() {
+            return run(std::integral_constant<bool, std::is_same<result_type, void>::value>(), std::index_sequence_for<Args...>{});
+        }
         
         std::function<result_type (Args...)> func;
         std::tuple<Args...> args;

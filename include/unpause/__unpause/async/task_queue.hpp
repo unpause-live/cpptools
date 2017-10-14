@@ -28,48 +28,59 @@ namespace unpause { namespace async {
         task_queue(task_queue&& other) = delete;
 
         // TODO: replace with a more robust semaphore implementation.
-        ~task_queue() { complete = true; while(end_sem_.load() > 0) { std::this_thread::yield(); } };
+        ~task_queue() { 
+            mutex_internal_.lock();
+            complete = true; 
+            tasks_.clear();
+            mutex_internal_.unlock();
+            while(end_sem_.load() > 0) { std::this_thread::yield(); } 
+            assert(end_sem_.load() == 0);
+        };
         
         template<class R, class... Args>
         void add(task<R, Args...>& t) {
             std::unique_ptr<detail::task_container> nt = std::make_unique<task<R, Args...>>(std::forward<task<R, Args...>>(t));
-            mutex_internal_.lock();
-            tasks_.push_back(std::move(nt));
-            mutex_internal_.unlock();
+            add(std::move(nt));
         }
         
         void add(std::unique_ptr<detail::task_container>&& task) {
-            mutex_internal_.lock();
-            tasks_.push_back(std::move(task));
-            mutex_internal_.unlock();
+            std::lock_guard<std::mutex> lk(mutex_internal_);
+            if(!complete.load()) {
+                tasks_.push_back(std::move(task));
+            }
         }
         
         template<class R, class... Args>
         void add(R&& r, Args&&... a) {
-            std::unique_ptr<detail::task_container> t;
-            t = std::make_unique<task<R, Args...>>(std::forward<R>(r), std::forward<Args>(a)...);
-            mutex_internal_.lock();
-            tasks_.push_back(std::move(t));
-            mutex_internal_.unlock();
+            std::unique_ptr<detail::task_container> nt = std::make_unique<task<R, Args...>>(std::forward<R>(r), std::forward<Args>(a)...);
+            add(std::move(nt));
         }
         
-        bool next() {
-            auto f = next_pop();
+        void inc_lock() {
             ++end_sem_;
+        }
+        
+        void dec_lock() {
+            --end_sem_;
+        }
+
+        bool next() {
+            inc_lock();
+            auto f = next_pop();
             if(f && !complete.load()) {
                 f->run_v();
             }
-            --end_sem_;
+            dec_lock();
             return has_next();
         }
         
         bool has_next() {
-            return tasks_.size() > 0;
+            return !tasks_.empty();
         }
         
         std::chrono::steady_clock::time_point next_dispatch_time() {
-            std::unique_lock<std::mutex> lk(mutex_internal_);
-            if(tasks_.size() > 0) {
+            std::lock_guard<std::mutex> lk(mutex_internal_);
+            if(has_next()) {
                 return tasks_.front()->dispatch_time;
             } else {
                 return std::chrono::steady_clock::time_point::min();
@@ -77,13 +88,13 @@ namespace unpause { namespace async {
         }
         
         std::unique_ptr<detail::task_container> next_pop() {
-            mutex_internal_.lock();
-            std::unique_ptr<detail::task_container> f;
+            std::lock_guard<std::mutex> lk(mutex_internal_);
+            std::unique_ptr<detail::task_container> f = nullptr;
             if(has_next()) {
-                f = std::move(tasks_.front());
+                auto& task = tasks_.front();
+                f = std::move(task);
                 tasks_.pop_front();
             }
-            mutex_internal_.unlock();
             return f;
         }
         
