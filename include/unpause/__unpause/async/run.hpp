@@ -131,7 +131,6 @@ namespace unpause { namespace async {
             std::condition_variable v;
             std::atomic<bool> d(false);
 
-            auto before = std::move(t.before_internal);
             auto after = std::move(t.after_internal);
 
             t.after_internal = [&, after = std::move(after)] {
