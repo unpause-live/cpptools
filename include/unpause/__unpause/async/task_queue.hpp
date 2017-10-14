@@ -13,6 +13,7 @@
 
 #include <experimental/optional>
 #include <algorithm>
+#include <cassert>
 #include <thread>
 #include <chrono>
 #include <memory>
