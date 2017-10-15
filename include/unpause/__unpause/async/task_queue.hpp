@@ -24,7 +24,7 @@
 namespace unpause { namespace async {
     struct task_queue
     {
-        task_queue() : complete(false), end_sem_(0) {};
+        task_queue() : complete(false), end_sem_(0), token(std::make_shared<int>(1)) {};
         task_queue(const task_queue& other) = delete;
         task_queue(task_queue&& other) = delete;
 
@@ -107,6 +107,7 @@ namespace unpause { namespace async {
             mutex_internal_.unlock();
         }
         
+        std::shared_ptr<int> token;
         std::mutex task_mutex;
         std::atomic<bool> complete;
     private:

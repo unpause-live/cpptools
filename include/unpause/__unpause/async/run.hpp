@@ -183,8 +183,11 @@ namespace unpause { namespace async {
     
     template<class R, class... Args>
     void schedule(thread_pool& pool, task_queue& queue, std::chrono::steady_clock::time_point point, task<R, Args...>&& t) {
-        auto w = make_task([] (thread_pool& pool, task_queue& queue, task<R, Args...>&& t){
-            run(pool, queue, t);
+        std::weak_ptr<int> token = queue.token;
+        auto w = make_task([token] (thread_pool& pool, task_queue& queue, task<R, Args...>&& t){
+            if(!token.expired()) {
+                run(pool, queue, t);
+            }
         }, pool, queue, std::move(t));
         w.dispatch_time = point;
         if(!pool.runloop) {
@@ -200,8 +203,11 @@ namespace unpause { namespace async {
     
     template<class R, class... Args>
     void schedule(run_loop& loop, task_queue& queue, std::chrono::steady_clock::time_point point, task<R, Args...>&& t) {
-        auto w = make_task([] (thread_pool& pool, task_queue& queue, task<R, Args...>&& t){
-            run(queue, t);
+        std::weak_ptr<int> token = queue.token;
+        auto w = make_task([token] (thread_pool& pool, task_queue& queue, task<R, Args...>&& t){
+            if(!token.expired()) {
+                run(queue, t);
+            }
         }, queue, std::move(t));
         w.dispatch_time = point;
         loop.queue.add(w);
