@@ -308,7 +308,7 @@ void interleave_test() {
     log("------- Testing interleaving queues with thread pool -------");
     using namespace unpause;
 
-    async::thread_pool p;
+    async::thread_pool p(4);
     async::task_queue q1;
     async::task_queue q2;
 
