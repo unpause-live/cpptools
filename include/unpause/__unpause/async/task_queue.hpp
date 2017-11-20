@@ -24,7 +24,7 @@
 namespace unpause { namespace async {
     struct task_queue
     {
-        task_queue() : complete(false), end_sem_(0), token(std::make_shared<int>(1)) {};
+        task_queue() : token(std::make_shared<int>(1)), complete(false), end_sem_(0) {};
         task_queue(const task_queue& other) = delete;
         task_queue(task_queue&& other) = delete;
 
