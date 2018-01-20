@@ -29,13 +29,15 @@ namespace unpause { namespace async {
         task_queue(task_queue&& other) = delete;
 
         // TODO: replace with a more robust semaphore implementation.
+        // Final tasks have 5 seconds to finish.  If it needs more time, use run_sync.
         ~task_queue() { 
             mutex_internal_.lock();
             complete = true; 
             tasks_.clear();
             mutex_internal_.unlock();
-            while(end_sem_.load() > 0) { std::this_thread::yield(); } 
-            assert(end_sem_.load() == 0);
+            auto start = std::chrono::steady_clock::now();
+            while(end_sem_.load() > 0 && ((std::chrono::steady_clock::now() - start) < std::chrono::seconds(5))) { std::this_thread::yield(); }
+            //assert(end_sem_.load() == 0);
         };
         
         template<class R, class... Args>
