@@ -2,9 +2,9 @@ BASE=..
 BUILD_DIR=$(BASE)/build
 OUTPUT_DIR=$(BASE)/test/build
 
-CFLAGS=-std=c++14 -pthread -c -fPIC -I$(BASE)/include -Wpedantic -Wall -Werror
+CFLAGS=-std=c++17 -pthread -c -fPIC -I$(BASE)/include -Wpedantic -Wall -Werror
 LDFLAGS=-lpthread -L$(BUILD_DIR) 
-CC=g++-5
+CC=g++
 
 ifeq ($(SANITIZE), 1)
 EXTRA_CCFLAGS=-O0 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -g

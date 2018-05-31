@@ -162,12 +162,14 @@ void thread_pool_test()
         std::atomic<uint64_t> ct(n);
         {
             async::thread_pool pool;
+            auto div = n / 4;
             for(uint64_t i = 1 ; i <= n ; i++)  {
-                async::run_sync(pool, [&](uint64_t in) { val += in; --ct;}, (uint64_t)i);
+                async::run_sync(pool, [&](uint64_t in) { val += in; --ct; }, (uint64_t)i);
+                if(!(i%div)) {
+                    log_v("ct=%" PRId64, n-i);
+                }
             }
-            while(ct.load() > 0) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
+            
         }
         log_v("val=%" PRId64 " n=%" PRId64 " t=%" PRId64, val.load(), n, (n*(n+1)/2));
         assert(val==(n*(n+1)/2));
