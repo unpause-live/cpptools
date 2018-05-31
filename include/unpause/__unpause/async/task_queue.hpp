@@ -78,7 +78,7 @@ namespace unpause { namespace async {
         }
         
         bool has_next() {
-            return !tasks_.empty();
+            return !complete.load() && !tasks_.empty();
         }
         
         std::chrono::steady_clock::time_point next_dispatch_time() {
