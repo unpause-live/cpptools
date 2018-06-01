@@ -56,35 +56,28 @@ namespace unpause { namespace async {
     {
         if(!queue.complete.load()) {
             auto after = std::move(t.after_internal);
-            
-            t.after_internal = [&, after = std::move(after)] {
-                if(after) {
-                    after();
-                }
-                if(!queue.complete.load() && queue.has_next()) {
+            auto try_next = [&] {
+                if(queue.has_next() && queue.task_mutex.try_lock()) {
                     auto next = queue.next_pop();
                     if(next) {
                         queue.inc_lock(); // add in-flight
                         detail::run(pool, std::move(next));
+                    } else {
+                        queue.task_mutex.unlock();
                     }
-                } else {
-                    queue.task_mutex.unlock();
+                } 
+            };
+
+            t.after_internal = [&, after = std::move(after), try_next] {
+                if(after) {
+                    after();
                 }
-                // remove in-flight
+                queue.task_mutex.unlock();
+                try_next();
                 queue.dec_lock();
             };
-            
             queue.add(t);
-            
-            if(queue.task_mutex.try_lock()) {
-                auto next = queue.next_pop();
-                if(next) {
-                    queue.inc_lock(); // add in-flight
-                    detail::run(pool, std::move(next));
-                } else {
-                    queue.task_mutex.unlock();
-                }
-            }
+            try_next();
         }
     }
     template<class R, class... Args>
@@ -134,12 +127,10 @@ namespace unpause { namespace async {
             auto after = std::move(t.after_internal);
 
             t.after_internal = [&, after = std::move(after)] {
-                
                 if(after) {
                     after();
                 }
                 d = true;
-                std::lock_guard<std::mutex> guard(m);
                 v.notify_one();
             };
             

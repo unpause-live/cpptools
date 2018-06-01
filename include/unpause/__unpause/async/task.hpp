@@ -82,10 +82,10 @@ namespace unpause { namespace async {
             func(std::get<I>(std::forward<std::tuple<Args...>>(args)) ...);
             if(after) {
                 after();
-            }
+            } 
             if(after_internal) {
                 after_internal();
-            }
+            } 
         }
         
         template<std::size_t... I>

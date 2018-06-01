@@ -292,6 +292,7 @@ void run_loop_test() {
             log("4s...");
             end3 = std::chrono::steady_clock::now();
         });
+
         std::this_thread::sleep_for(std::chrono::seconds(5));
         auto diff1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start).count();
         log_v("Diff=%" PRId64, diff1);
@@ -314,7 +315,7 @@ void interleave_test() {
     async::task_queue q1;
     async::task_queue q2;
 
-    for(int i = 0 ; i < 100 ; i++) {
+    for(int i = 0 ; i < 10000 ; i++) {
         std::atomic<int> val1(0);
         std::atomic<int> val2(0);
         
