@@ -130,11 +130,11 @@ namespace unpause { namespace async {
         std::mutex task_mutex;
         std::atomic<bool> complete;
     private:
-        std::deque<std::unique_ptr<detail::task_container>> tasks_;
         std::mutex mutex_internal_;
         std::atomic<int> end_sem_;
         std::atomic<int64_t> count_;
         std::string name_;
+        std::deque<std::unique_ptr<detail::task_container>> tasks_;
         
     };
 }

@@ -65,9 +65,9 @@ namespace unpause { namespace async {
     private:
         std::atomic<bool> exiting_;
         std::atomic<bool> dirty_;
-        std::thread looper_;
         std::condition_variable cond_;
         std::mutex mutex_;
+        std::thread looper_;
     };
 }
 }

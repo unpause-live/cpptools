@@ -55,8 +55,8 @@ namespace unpause { namespace async {
                 }
             }
         }
-        std::list<std::thread> threads_;
         std::atomic<bool> exiting_;
+        std::list<std::thread> threads_;
     };
     
 }
