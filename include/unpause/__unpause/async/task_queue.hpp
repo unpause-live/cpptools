@@ -22,9 +22,10 @@
 #include <mutex>
 
 namespace unpause { namespace async {
+
     struct task_queue
     {
-        task_queue() : token(std::make_shared<int>(1)), complete(false), end_sem_(0), count_(0) {};
+        task_queue() : token(std::make_shared<std::atomic<bool>>(true)), complete(false), end_sem_(0), count_(0) {};
         task_queue(const task_queue& other) = delete;
         task_queue(task_queue&& other) = delete;
         task_queue& operator=(const task_queue& other) = delete;
@@ -33,13 +34,16 @@ namespace unpause { namespace async {
         // TODO: replace with a more robust semaphore implementation.
         // Final tasks have 5 seconds to finish.  If it needs more time, use run_sync.
         ~task_queue() { 
+
             mutex_internal_.lock();
             complete = true; 
             tasks_.clear();
+            token->store(false, std::memory_order_release);
             mutex_internal_.unlock();
             auto start = std::chrono::steady_clock::now();
+            
             while(end_sem_.load() > 0 && ((std::chrono::steady_clock::now() - start) < std::chrono::seconds(5))) { std::this_thread::yield(); }
-            //assert(end_sem_.load() == 0);
+            
         };
         
         template<class R, class... Args>
@@ -51,6 +55,10 @@ namespace unpause { namespace async {
         void add(std::unique_ptr<detail::task_container>&& task) {
             std::unique_lock<std::mutex> lk(mutex_internal_);
             if(!complete.load()) {
+                if(!task->use_token) {
+                    task->token = token;
+                    task->use_token = true;
+                }
                 tasks_.push_back(std::move(task));
                 std::atomic_thread_fence(std::memory_order_release);
                 count_.fetch_add(1, std::memory_order_relaxed);
@@ -126,7 +134,7 @@ namespace unpause { namespace async {
 
         const std::string name() const { return name_; }
 
-        std::shared_ptr<int> token;
+        std::shared_ptr<std::atomic<bool>> token;
         std::mutex task_mutex;
         std::atomic<bool> complete;
     private:

@@ -349,11 +349,11 @@ void interleave_test() {
     log("OK");
 }
 
-void abrupt_exit_test() {
+void abrupt_exit_test( int ct ) {
     log("------- Testing abrupt dealloc of queue -------");
     using namespace unpause;
     async::thread_pool p;
-    for(int i = 0 ; i < 10000 ; i++)
+    for(int i = 0 ; i < ct ; i++)
     {
         {
             async::task_queue q;    
@@ -366,6 +366,34 @@ void abrupt_exit_test() {
         }
     }
 
+    log("------- Testing abrupt dealloc of queue with schedule -------");
+    log("will take approx. 250 seconds...");
+    
+    std::vector<async::task_queue*> qs;
+    for(int i = 0 ; i < ct; i++) {
+        qs.push_back(new async::task_queue());
+    }
+    for(int i = 0 ; i < ct ; i++)
+    {
+        {
+            async::task_queue* q = qs[i];
+            q->set_name(std::to_string(i));
+            for(int j = 0 ; j < 100 ; j++) {
+                auto start = i;
+                async::schedule(p, *q, std::chrono::steady_clock::now() + std::chrono::milliseconds(j), [start, &i, j] {
+                    if(start!=i) {
+                        log_v("%d != %d [%d]", start, i, j);
+                    }
+                    assert(start==i);
+                });
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(25));
+            delete qs[i];
+        }
+        if((i%1000)==0) {
+            log_v("%d", i);
+        }
+    }
     log("OK");
     
 }
@@ -376,6 +404,6 @@ int main(void)
     thread_pool_test();
     run_loop_test();
     interleave_test();
-    abrupt_exit_test();
+    abrupt_exit_test(10000);
     return 0;
 }

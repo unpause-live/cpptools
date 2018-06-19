@@ -174,7 +174,7 @@ namespace unpause { namespace async {
     
     template<class R, class... Args>
     void schedule(thread_pool& pool, task_queue& queue, std::chrono::steady_clock::time_point point, task<R, Args...>&& t) {
-        std::weak_ptr<int> token = queue.token;
+        std::weak_ptr<std::atomic<bool>> token = queue.token;
         auto w = make_task([token] (thread_pool& pool, task_queue& queue, task<R, Args...>&& t){
             if(!token.expired()) {
                 run(pool, queue, t);
@@ -194,7 +194,7 @@ namespace unpause { namespace async {
     
     template<class R, class... Args>
     void schedule(run_loop& loop, task_queue& queue, std::chrono::steady_clock::time_point point, task<R, Args...>&& t) {
-        std::weak_ptr<int> token = queue.token;
+        std::weak_ptr<std::atomic<bool>> token = queue.token;
         auto w = make_task([token] (thread_pool& pool, task_queue& queue, task<R, Args...>&& t){
             if(!token.expired()) {
                 run(queue, t);

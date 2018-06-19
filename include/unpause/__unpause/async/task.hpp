@@ -14,6 +14,7 @@
 #include <functional>
 #include <utility>
 #include <chrono>
+#include <memory>
 #include <tuple>
 
 namespace unpause { namespace async {
@@ -35,7 +36,11 @@ namespace unpause { namespace async {
             task_container(task_container&& other)
             : before_internal(std::move(other.before_internal))
             , after_internal(std::move(other.after_internal))
-            , dispatch_time(std::move(other.dispatch_time)){}; 
+            , dispatch_time(std::move(other.dispatch_time))
+            , token(std::move(other.token))
+            , use_token(other.use_token) 
+            { other.token.reset(); other.use_token = false; }; 
+
             task_container(const task_container& other) = delete;
 
             virtual ~task_container() {};
@@ -44,6 +49,8 @@ namespace unpause { namespace async {
             std::function<void()> before_internal; // used for task_queue
             std::function<void()> after_internal; // used for task_queue
             std::chrono::steady_clock::time_point dispatch_time; // used for run_loop
+            std::weak_ptr<std::atomic<bool>> token;
+            bool use_token {false};
         };
     }
     
@@ -72,34 +79,45 @@ namespace unpause { namespace async {
         std::function<result_type (Args...)> func;
         std::tuple<Args...> args;
         after_type after;
-        
+
     private:
         template<std::size_t... I>
         result_type run(std::true_type, std::index_sequence<I...>) {
+            
             if(before_internal) {
                 before_internal();
             }
-            func(std::get<I>(std::forward<std::tuple<Args...>>(args)) ...);
-            if(after) {
-                after();
-            } 
+            auto t = token.lock();
+            if(!use_token || (use_token && t && t->load(std::memory_order_acquire))) {
+                func(std::get<I>(std::forward<std::tuple<Args...>>(args)) ...);
+                if(after) {
+                    after();
+                }
+            }
             if(after_internal) {
                 after_internal();
             } 
+            
         }
         
         template<std::size_t... I>
         result_type run(std::false_type, std::index_sequence<I...>) {
+            result_type res;
+            
             if(before_internal) {
                 before_internal();
             }
-            auto res = func(std::get<I>(std::forward<std::tuple<Args...>>(args)) ...);
-            if(after) {
-                after(res);
-            }
+            auto t = token.lock();
+            if(!use_token || (use_token && t && t->load(std::memory_order_acquire))) {
+                res = func(std::get<I>(std::forward<std::tuple<Args...>>(args)) ...);
+                if(after) {
+                    after(res);
+                }
+            } 
             if(after_internal) {
                 after_internal();
             }
+        
             return res;
         }
     };

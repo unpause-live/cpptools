@@ -10,7 +10,7 @@ ifeq ($(SANITIZE), 1)
 EXTRA_CCFLAGS=-O0 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -g
 EXTRA_LDFLAGS=-lasan -llsan
 else
-EXTRA_CCFLAGS=-O2
+EXTRA_CCFLAGS=-O2 -g
 endif
 
 all: async
