@@ -15,6 +15,7 @@
 #include <utility>
 #include <chrono>
 #include <memory>
+#include <atomic>
 #include <tuple>
 
 namespace unpause { namespace async {
