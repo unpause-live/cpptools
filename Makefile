@@ -6,7 +6,7 @@ OBJS=$(SRC:.cpp=.o)
 
 CFLAGS=-std=c++14 -pthread -c -fPIC -O2 -I$(BASE)/include
 LDFLAGS=-lpthread -Wl,-z,defs
-CC=g++
+CC=clang
 
 all: libcpptools.so libcpptools.a headers
 

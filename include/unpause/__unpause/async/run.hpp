@@ -54,10 +54,11 @@ namespace unpause { namespace async {
     template<class R, class... Args>
     void run(thread_pool& pool, task_queue& queue, task<R, Args...>& t)
     {
-        if(!queue.complete.load()) {
+        std::weak_ptr<std::atomic<bool>> token = queue.token;
+        if(!token.expired() && !queue.complete.load()) {
             auto after = std::move(t.after_internal);
-            auto try_next = [&] {
-                if(queue.has_next() && queue.task_mutex.try_lock()) {
+            auto try_next = [&, token] {
+                if(!token.expired() && queue.has_next() && queue.task_mutex.try_lock()) {
                     auto next = queue.next_pop();
                     if(next) {
                         queue.inc_lock(); // add in-flight
@@ -123,24 +124,20 @@ namespace unpause { namespace async {
             std::mutex m;
             std::condition_variable v;
             std::atomic<bool> d(false);
-
             auto after = std::move(t.after_internal);
 
             t.after_internal = [&, after = std::move(after)] {
                 if(after) {
                     after();
                 }
+                std::lock_guard<std::mutex> guard(m);
                 d = true;
                 v.notify_one();
             };
             
             run(pool, queue, t);
-            
             std::unique_lock<std::mutex> lk(m);
-            
-            while(!d.load()) { 
-                v.wait_for(lk, std::chrono::milliseconds(100), [&d] { return d.load(); });
-            }
+            v.wait(lk, [&] { return d.load(); });
         }
     }
     

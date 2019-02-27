@@ -228,6 +228,7 @@ void run_loop_test() {
             log("4s...");
             end3 = std::chrono::steady_clock::now();
         });
+        log("start.");
         std::this_thread::sleep_for(std::chrono::seconds(5));
         auto diff1 = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start).count();
         log_v("Diff=%" PRId64, diff1);
@@ -315,10 +316,12 @@ void interleave_test() {
     async::task_queue q1;
     async::task_queue q2;
 
-    for(int i = 0 ; i < 10000 ; i++) {
+    for(int i = 0 ; i < 100000 ; i++) {
         std::atomic<int> val1(0);
         std::atomic<int> val2(0);
-        
+        if(i % 10000 == 0) {
+            log_v("i=%d/100000", i);
+        }
         async::run(p, q1, [&val1]{
             assert(val1.load() == 0);
             val1++;
@@ -405,5 +408,6 @@ int main(void)
     run_loop_test();
     interleave_test();
     abrupt_exit_test(10000);
+    
     return 0;
 }

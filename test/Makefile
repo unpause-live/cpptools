@@ -2,15 +2,15 @@ BASE=..
 BUILD_DIR=$(BASE)/build
 OUTPUT_DIR=$(BASE)/test/build
 
-CFLAGS=-std=c++17 -pthread -c -fPIC -I$(BASE)/include -Wpedantic -Wall -Werror
-LDFLAGS=-lpthread -L$(BUILD_DIR) 
+CFLAGS=-std=c++17 -pthread -c -fPIC -I$(BASE)/include -Wpedantic -Wall -Werror -Wno-gnu-zero-variadic-macro-arguments
+LDFLAGS=-lpthread
 CC=g++
 
 ifeq ($(SANITIZE), 1)
-EXTRA_CCFLAGS=-O0 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -g
+EXTRA_CCFLAGS=-O0 -fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -g 
 EXTRA_LDFLAGS=-lasan -llsan
 else
-EXTRA_CCFLAGS=-O2 -g
+EXTRA_CCFLAGS=-Os
 endif
 
 all: async

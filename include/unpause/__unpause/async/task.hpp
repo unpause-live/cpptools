@@ -103,7 +103,7 @@ namespace unpause { namespace async {
         
         template<std::size_t... I>
         result_type run(std::false_type, std::index_sequence<I...>) {
-            result_type res;
+            result_type res = result_type();
             
             if(before_internal) {
                 before_internal();
