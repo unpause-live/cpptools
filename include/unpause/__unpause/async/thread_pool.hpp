@@ -1,4 +1,4 @@
-/* Copyright (c) 2017 Unpause, Inc.
+/* Copyright (c) 2020 Unpause, SAS.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -12,7 +12,7 @@
 #define UNPAUSE_ASYNC_THREAD_POOL_HPP
 
 #include <condition_variable>
-#include <experimental/optional>
+#include <optional>
 #include <atomic>
 #include <thread>
 #include <list>
@@ -41,7 +41,7 @@ namespace unpause { namespace async {
         task_queue tasks;
         std::condition_variable task_waiter;
         std::mutex task_mutex;
-        std::experimental::optional<run_loop> runloop;
+        std::optional<run_loop> runloop;
         
     private:
         void thread_func() {

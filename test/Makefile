@@ -2,7 +2,7 @@ BASE=..
 BUILD_DIR=$(BASE)/build
 OUTPUT_DIR=$(BASE)/test/build
 
-CFLAGS=-std=c++17 -pthread -c -fPIC -I$(BASE)/include -Wpedantic -Wall -Werror -Wno-gnu-zero-variadic-macro-arguments
+CFLAGS=-std=c++17 -pthread -c -fPIC -I$(BASE)/include -Wpedantic -Wextra -Wall -Werror -Wno-gnu-zero-variadic-macro-arguments
 LDFLAGS=-lpthread
 CC=g++
 

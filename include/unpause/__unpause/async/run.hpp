@@ -1,4 +1,4 @@
-/* Copyright (c) 2017 Unpause, Inc.
+/* Copyright (c) 2020 Unpause, SAS.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -192,7 +192,7 @@ namespace unpause { namespace async {
     template<class R, class... Args>
     void schedule(run_loop& loop, task_queue& queue, std::chrono::steady_clock::time_point point, task<R, Args...>&& t) {
         std::weak_ptr<std::atomic<bool>> token = queue.token;
-        auto w = make_task([token] (thread_pool& pool, task_queue& queue, task<R, Args...>&& t){
+        auto w = make_task([token] (thread_pool&, task_queue& queue, task<R, Args...>&& t){
             if(!token.expired()) {
                 run(queue, t);
             }

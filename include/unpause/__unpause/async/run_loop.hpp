@@ -1,4 +1,4 @@
-/* Copyright (c) 2017 Unpause, Inc.
+/* Copyright (c) 2020 Unpause, SAS.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -7,6 +7,7 @@
  *  See the file LICENSE included with this distribution for more
  *  information.
  */
+
 #ifndef UNPAUSE_ASYNC_RUN_LOOP_HPP
 #define UNPAUSE_ASYNC_RUN_LOOP_HPP
 
