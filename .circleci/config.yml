@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: frolvlad/alpine-gxx:latest
+      - image: debian:buster
     working_directory: ~/repo
     steps:
       - checkout
