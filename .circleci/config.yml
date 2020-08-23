@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: unpause/gpp:7
+      - image: frolvlad/alpine-gxx:latest
     working_directory: ~/repo
     steps:
       - checkout
